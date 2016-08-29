@@ -1,25 +1,25 @@
 var PinIt = require('pin-it-node');
 var fs = require('fs');
 
-var boardId = '464082005291132817';
-var url = 'https://twitter.com/tickleapp';
 var uploaded_path = './data/uploaded.json';
 var new_upload_path = './data/new_found.json';
 var uploaded_data = {};
 var new_upload_data = {};
 
-
+// Data for Pinterest, to fill
+var boardId = '';
+var url = 'https://twitter.com/tickleapp';
 var pinIt = new PinIt({
-    username: 'seal6363@gmail.com',
-    userurl: 'lyrisovo',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
-    password: 'pikachuya',
+    username: '',
+    userurl: '',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
+    password: '',
     debug: false
 });
 
 
 function writeFiles() {
 	fs.writeFile('./data/uploaded.json', JSON.stringify(uploaded_data), (err) => {
-        	if (err) throw err});
+    if (err) throw err});
 }
 
 function pin_one(tweets, count) {
@@ -65,7 +65,7 @@ function upload(data) {
 }
 
 
-
+// Gets new found tweets and previous uploaded data then starts uploading
 function prepareUploadData() {
 	if (fs.existsSync(new_upload_path)) {
 	        var pre = fs.readFileSync(new_upload_path, 'utf-8');

@@ -23,11 +23,10 @@ function writeFiles() {
         if (err) throw err});
 }
 
-
 function start_download(data) {
 	var tweets = data.tweets;
 	var count = 0;
-	if (tweets.length > 0) {
+	if (tweets.length > 0) { // have new tweets
 		for (var i = tweets.length - 1; i >= 0; i--) {
 			console.log(new_download_data.tweets.length)
 			var tweet = tweets.pop();
@@ -38,7 +37,7 @@ function start_download(data) {
 				download(uri, './downloaded/' + id + '.jpg', function(){
 					count++;
 		  			console.log(id + ' downloaded, count ' + count);
-		  			downloaded_data.ids.push(id);
+		  			downloaded_data.ids.push(id); // records downloaded tweet's id
 		  			writeFiles();
 				});
 			}	
@@ -48,7 +47,7 @@ function start_download(data) {
 	}
 }
 
-
+// Gets new found tweets and previous downloaded data then starts downloading
 function prepareDownloadData() {
 	if (fs.existsSync(new_download_path)) {
 	        var pre = fs.readFileSync(new_download_path, 'utf-8');
