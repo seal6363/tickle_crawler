@@ -1,0 +1,25 @@
+{
+  "name": "twitter-crawler",
+  "version": "1.0.0",
+  "description": "Tool for crawling the data from twitter then post to pinterest",
+  "main": "TTData.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tickleapp/twitter-crawler.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tickleapp/twitter-crawler/issues"
+  },
+  "homepage": "https://github.com/tickleapp/twitter-crawler#readme",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "pin-it-node": "^0.2.0",
+    "request": "^2.74.0",
+    "twitter-node-client": "0.0.6"
+  }
+}

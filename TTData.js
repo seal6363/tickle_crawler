@@ -1,5 +1,15 @@
 var fs = require('fs');
 var Twitter = require('twitter-node-client').Twitter;
+
+//Get this data from twitter apps dashboard
+var config = {
+    "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
+    "consumerSecret": "qMWhFuYnQK4Oxh1i8ruHB2vKrMHaRzeTn78ACnJRWiCg7eVNtt",
+    "accessToken": "2529449622-cWSxhmvc7nWcmn7Br9Oe6Bf1RbOFF3pFmZanIsV",
+    "accessTokenSecret": "iQIc23V5OmDpsHisU39QZ9qCDATZyvOMGlVzNl4dYfLXj",
+    "callBackUrl": "XXX"
+}
+
 var twitter = new Twitter(config);
 
 // Variables for processing GET request
@@ -18,15 +28,6 @@ var oldData = getOldData();
 var newData = {"tweets" : []};
 var total_new = 0;
 
-//Get this data from twitter apps dashboard
-var config = {
-    "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
-    "consumerSecret": "qMWhFuYnQK4Oxh1i8ruHB2vKrMHaRzeTn78ACnJRWiCg7eVNtt",
-    "accessToken": "2529449622-cWSxhmvc7nWcmn7Br9Oe6Bf1RbOFF3pFmZanIsV",
-    "accessTokenSecret": "iQIc23V5OmDpsHisU39QZ9qCDATZyvOMGlVzNl4dYfLXj",
-    "callBackUrl": "XXX"
-}
-
 //Callback functions
 var error = function (err, response, body) {
     console.log('ERROR [%s]', JSON.stringify(err));
@@ -36,14 +37,14 @@ var success = function (data) {
 };
 
 function writeFiles() {
-            fs.writeFile('./data/' + fileName + '.json', JSON.stringify(oldData), (err) => {
-                if (err) throw err});
-            fs.writeFile('./data/new_found.json', JSON.stringify(oldData), function(err) {
-                if (err) throw err
-            });
-            fs.writeFile('./data/oldIds.json', JSON.stringify({"ids" : oldData.ids}), function(err) {
-                if (err) throw err
-            });
+    fs.writeFile('./data/' + fileName + '.json', JSON.stringify(oldData), (err) => {
+        if (err) throw err});
+    fs.writeFile('./data/new_found.json', JSON.stringify(oldData), function(err) {
+        if (err) throw err
+    });
+    fs.writeFile('./data/oldIds.json', JSON.stringify({"ids" : oldData.ids}), function(err) {
+        if (err) throw err
+    });
 }
 
 // Escapes the tweet's description to proper format
