@@ -1,4 +1,31 @@
 var fs = require('fs');
+var Twitter = require('twitter-node-client').Twitter;
+var twitter = new Twitter(config);
+
+// Variables for processing GET request
+var current_query = {};
+var current_type = '';
+var newRoutine = true;
+var nextMaxId = ''; 
+var nextSinceId = '';
+
+// Variables for noting the data
+var date = new Date();
+var fileName = date.getFullYear() + "_" + date.getMonth() + "_" + date.getDate() + "_tweets";
+var oldIds = [];
+var newIds = [];
+var oldData = getOldData();
+var newData = {"tweets" : []};
+var total_new = 0;
+
+//Get this data from twitter apps dashboard
+var config = {
+    "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
+    "consumerSecret": "qMWhFuYnQK4Oxh1i8ruHB2vKrMHaRzeTn78ACnJRWiCg7eVNtt",
+    "accessToken": "2529449622-cWSxhmvc7nWcmn7Br9Oe6Bf1RbOFF3pFmZanIsV",
+    "accessTokenSecret": "iQIc23V5OmDpsHisU39QZ9qCDATZyvOMGlVzNl4dYfLXj",
+    "callBackUrl": "XXX"
+}
 
 //Callback functions
 var error = function (err, response, body) {
@@ -7,13 +34,6 @@ var error = function (err, response, body) {
 var success = function (data) {
     getTimelineResult(data);
 };
-
-var current_query = {};
-var current_type = '';
-var newRoutine = true;
-var nextMaxId = ''; 
-var nextSinceId = '';
-
 
 function writeFiles() {
             fs.writeFile('./data/' + fileName + '.json', JSON.stringify(oldData), (err) => {
@@ -26,6 +46,7 @@ function writeFiles() {
             });
 }
 
+// Escapes the tweet's description to proper format
 function escapeString(str) {
     str = str.replace(/"/g, "\\\"");
     str = str.replace(/\n/g, " ");
@@ -34,9 +55,9 @@ function escapeString(str) {
 
 
 function processResult(statuses) {
-        console.log("-------------------------------------");
+    console.log("-------------------------------------");
 
-    maxId = (current_query.max_id == null) ? '' : current_query.max_id;
+        maxId = (current_query.max_id == null) ? '' : current_query.max_id;
         sinceId = (current_query.since_id == null) ? '' : current_query.since_id;
         // done searching
         if (newRoutine && statuses.length == 0) {
@@ -45,10 +66,8 @@ function processResult(statuses) {
             writeFiles();
             console.log("done searching, found " + total_new);
 
-
         } else {
-            
-            
+
             for (var i = 0; i < statuses.length; i++) {
                 var status = statuses[i];
 
@@ -107,16 +126,19 @@ function processResult(statuses) {
 
 }
 
+// processes result from REST API: GET statuses/user_timeline
 function getTimelineResult(data) {
         var statuses = JSON.parse(data);
         processResult(statuses);
 }
 
+// processes result from REST API: GET search/tweets
 function getSearchResult(data) {
         var statuses = JSON.parse(data).statuses;
         processResult(statuses);
 }
 
+// calculates Since ID
 function getIncrementSinceId(sinceId) {
 
         var i, currentDigit,
@@ -154,6 +176,7 @@ function getIncrementSinceId(sinceId) {
         return sinceId;
     }
 
+// calculates Max ID
 function getDecrementMaxId(maxIdStr) {
 
         var i, currentDigit,
@@ -191,36 +214,17 @@ function getDecrementMaxId(maxIdStr) {
         return maxIdStr;
     }
 
-var Twitter = require('twitter-node-client').Twitter;
 
-//Get this data from your twitter apps dashboard
-var config = {
-    "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
-    "consumerSecret": "qMWhFuYnQK4Oxh1i8ruHB2vKrMHaRzeTn78ACnJRWiCg7eVNtt",
-    "accessToken": "2529449622-cWSxhmvc7nWcmn7Br9Oe6Bf1RbOFF3pFmZanIsV",
-    "accessTokenSecret": "iQIc23V5OmDpsHisU39QZ9qCDATZyvOMGlVzNl4dYfLXj",
-    "callBackUrl": "XXX"
-}
-
-var twitter = new Twitter(config);
-
-
-var date = new Date();
-var fileName = date.getFullYear() + "_" + date.getMonth() + "_" + date.getDate() + "_tweets";
-var oldIds = [];
-var newIds = [];
-var oldData = getOldData();
-var newData = {"tweets" : []};
-var total_new = 0;
 
 function getOldData() {
+    // get all IDs found previously
     if (fs.existsSync('./data/oldIds.json')) {
         var pre = fs.readFileSync('./data/oldIds.json', "utf-8");
             oldIds = JSON.parse(pre).ids;
             console.log(oldIds);
     
     }
-
+    // get today's file if exists
     var path = './data/' + fileName + '.json';
     console.log("load " + path)
     if (fs.existsSync(path)) {
@@ -232,6 +236,7 @@ function getOldData() {
     }
 }
 
+// Returns the media url of the tweet
 function process_media(entities) {
     if (entities.hasOwnProperty('media')) {
         var media = entities.media[0]
@@ -239,6 +244,7 @@ function process_media(entities) {
     }
 }
 
+// Excecutes GET request with the given type (user_timeline as defalut)
 function searchAPI(type) {
     if (type == 'search') {
         current_query = {'q':'@tickleapp', 'count': 50};
