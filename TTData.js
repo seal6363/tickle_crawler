@@ -1,260 +1,301 @@
 var fs = require('fs');
 var Twitter = require('twitter-node-client').Twitter;
-var twitter = new Twitter(config);
 
-// Variables for processing GET request
-var current_query = {};
-var current_type = '';
-var newRoutine = true;
-var nextMaxId = ''; 
-var nextSinceId = '';
+// modules for upload and download
+// Prototype functions, after_crawling and after_downloading, might have to be modified if below modules are changed.
+var downloader = require('./downloader');
+var uploader = require('./uploader');
 
-// Variables for noting the data
-var date = new Date();
-var fileName = date.getFullYear() + "_" + date.getMonth() + "_" + date.getDate() + "_tweets";
-var oldIds = [];
-var newIds = [];
-var oldData = getOldData();
-var newData = {"tweets" : []};
-var total_new = 0;
+var TT = function() {
+    // Variables for processing GET request 
+    // see twitter-node-client (https://github.com/BoyCook/TwitterJSClient) for more info
+    this.current_query = {};
+    this.current_type = ''; // 'user_timeline' or 'search'
+    this.newRoutine = true; 
+    this.nextMaxId = ''; // see REST API for more info
+    this.nextSinceId = ''; // see REST API for more info
 
-//Get this data from twitter apps dashboard
-var config = {
-    "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
-    "consumerSecret": "qMWhFuYnQK4Oxh1i8ruHB2vKrMHaRzeTn78ACnJRWiCg7eVNtt",
-    "accessToken": "2529449622-cWSxhmvc7nWcmn7Br9Oe6Bf1RbOFF3pFmZanIsV",
-    "accessTokenSecret": "iQIc23V5OmDpsHisU39QZ9qCDATZyvOMGlVzNl4dYfLXj",
-    "callBackUrl": "XXX"
-}
+    // Variables for noting the data
+    this.date = new Date();
+    this.fileName = this.date.getFullYear() + "_" + this.date.getMonth() + "_" + this.date.getDate() + "_tweets";
+    this.oldIds = [];
+    this.newIds = [];
+    this.oldData = {};
+    this.newData = {"tweets" : []};
+    this.total_new = 0;
 
-//Callback functions
-var error = function (err, response, body) {
-    console.log('ERROR [%s]', JSON.stringify(err));
+    //Get this data from twitter apps dashboard
+    this.config = {
+        "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
+        "consumerSecret": "qMWhFuYnQK4Oxh1i8ruHB2vKrMHaRzeTn78ACnJRWiCg7eVNtt",
+        "accessToken": "2529449622-cWSxhmvc7nWcmn7Br9Oe6Bf1RbOFF3pFmZanIsV",
+        "accessTokenSecret": "iQIc23V5OmDpsHisU39QZ9qCDATZyvOMGlVzNl4dYfLXj",
+        "callBackUrl": "XXX"
+    }
+
+    this.twitter = new Twitter(this.config);
 };
-var success = function (data) {
-    getTimelineResult(data);
-};
 
-function writeFiles() {
-            fs.writeFile('./data/' + fileName + '.json', JSON.stringify(oldData), (err) => {
+TT.prototype = {
+
+    // Given a callback function executed after completeing crawling
+    writeFiles: function(callback) {
+        var self = this;
+            fs.writeFile('./data/' + self.fileName + '.json', JSON.stringify(self.oldData), (err) => {
                 if (err) throw err});
-            fs.writeFile('./data/new_found.json', JSON.stringify(oldData), function(err) {
+            fs.writeFile('./data/new_found.json', JSON.stringify(self.oldData), function(err) {
                 if (err) throw err
             });
-            fs.writeFile('./data/oldIds.json', JSON.stringify({"ids" : oldData.ids}), function(err) {
-                if (err) throw err
+            fs.writeFile('./data/oldIds.json', JSON.stringify({"ids" : self.oldIds}), function(err) {
+                if (err) throw err;
+                callback.call(self);
             });
-}
+    },
 
-// Escapes the tweet's description to proper format
-function escapeString(str) {
-    str = str.replace(/"/g, "\\\"");
-    str = str.replace(/\n/g, " ");
-    return str;
-}
+    // Escapes the tweet's description to proper format
+    escapeString: function(str) {
+        var self = this;
+        str = str.replace(/"/g, "\\\"");
+        str = str.replace(/\n/g, " ");
+        return str;
+    },
 
 
-function processResult(statuses) {
-    console.log("-------------------------------------");
+    processResult: function(statuses) {
+        var self = this;
+        console.log("-------------------------------------");
 
-        maxId = (current_query.max_id == null) ? '' : current_query.max_id;
-        sinceId = (current_query.since_id == null) ? '' : current_query.since_id;
-        // done searching
-        if (newRoutine && statuses.length == 0) {
+            maxId = (self.current_query.max_id == null) ? '' : self.current_query.max_id;
+            sinceId = (self.current_query.since_id == null) ? '' : self.current_query.since_id;
+            // done searching
+            if (self.newRoutine && statuses.length == 0) {
 
-            // create json
-            writeFiles();
-            console.log("done searching, found " + total_new);
+                // create json
+                self.writeFiles(self.after_crawling.bind(self));
+                console.log("done searching, found " + self.total_new);
 
-        } else {
+            } else {
 
-            for (var i = 0; i < statuses.length; i++) {
-                var status = statuses[i];
+                for (var i = 0; i < statuses.length; i++) {
+                    var status = statuses[i];
 
-                if (oldIds.indexOf(status.id_str) < 0) {
-                    var tweet = {};
-                    tweet.date = status.created_at;
-                    tweet.id = status.id_str;
-                    tweet.text = escapeString(status.text);
-                    console.log(tweet.text)
-                    tweet.media_url = process_media(status.entities);
-                    //tweet.user = status.user
-                    tweet.hashtags = status.entities.hashtags;
-                    oldData.tweets.unshift(tweet);
-                    oldData.ids.unshift(tweet.id);
-                    if (tweet.media_url != undefined) {
-                        newData.tweets.unshift(tweet);
+                    if (self.oldIds.indexOf(status.id_str) < 0) {
+                        var tweet = {};
+                        tweet.date = status.created_at;
+                        tweet.id = status.id_str;
+                        tweet.text = self.escapeString(status.text);
+                        console.log(tweet.text)
+                        tweet.media_url = self.process_media(status.entities);
+                        //tweet.user = status.user
+                        tweet.hashtags = status.entities.hashtags;
+                        self.oldData.tweets.unshift(tweet);
+                        self.oldData.ids.unshift(tweet.id);
+                        self.oldIds.unshift(tweet.id);
+                        if (tweet.media_url != undefined) {
+                            self.newData.tweets.unshift(tweet);
+                        }
+                        self.newIds.push(tweet.id);
+                        self.total_new++;
+                        console.log(status)
+                        //console.log(tweet)
+                    } else { // found redundant
+                        self.writeFiles(self.after_crawling.bind(self));
+                        console.log("redundant, found " + self.total_new);
+                        break;
                     }
-                    newIds.push(tweet.id);
-                    total_new++;
-                    console.log(status)
-                    //console.log(tweet)
-                } else { // found redundant
-                    writeFiles();
-                    console.log("redundant, found " + total_new);
-                    break;
                 }
+                if (statuses.length !== 0) {
+                        self.nextMaxId = self.getDecrementMaxId(statuses[statuses.length - 1].id_str);
+                        console.log("Next Max Id: " + self.nextMaxId);
+
+                }
+
+                if (statuses.length !== 0 && self.newRoutine) {
+                        self.newRoutine = false;
+                        self.nextSinceId = self.getIncrementSinceId(statuses[0].id_str);
+
+                        console.log("Next Since Id: " + self.nextSinceId);
+                }
+
+                // search for new added
+                if (statuses.length == 0 && !self.newRoutine) {
+                    console.log("its empty");
+                    console.log(self.nextSinceId);
+                    self.newRoutine = true;
+                    self.current_query.since_id = self.nextSinceId;
+
+                } else if (self.sinceId != '') {
+                    self.current_query.since_id = self.sinceId;
+                    self.current_query.max_id = self.nextMaxId;
+                } else { // keep going on searching
+                    self.current_query.max_id = self.nextMaxId;
+                }
+                self.twitter.getCustomApiCall(self.current_type, self.current_query, self.error, self.success.bind(self));
             }
-            if (statuses.length !== 0) {
-                    nextMaxId = getDecrementMaxId(statuses[statuses.length - 1].id_str);
-                    console.log("Next Max Id: " + nextMaxId);
 
+    },
+
+    // processes result from REST API: GET statuses/user_timeline
+    getTimelineResult: function(data) {
+        var self = this;
+            var statuses = JSON.parse(data);
+            self.processResult(statuses);
+    },
+
+    // processes result from REST API: GET search/tweets
+    getSearchResult: function(data) {
+        var self = this;
+            var statuses = JSON.parse(data).statuses;
+            self.processResult(statuses);
+    },
+
+    // calculates Since ID
+    getIncrementSinceId: function(sinceId) {
+        var self = this;
+            var i, currentDigit,
+                index = 1,
+                borrowDigit = true,
+                length = sinceId.length;
+
+            function setCharAt(str, index, chr) {
+
+                if (index > str.length - 1) {
+                    return str;
+                }
+
+                return str.substr(0, index) + chr + str.substr(index + 1);
             }
 
-            if (statuses.length !== 0 && newRoutine) {
-                    newRoutine = false;
-                    nextSinceId = getIncrementSinceId(statuses[0].id_str);
+            while (borrowDigit) {
 
-                    console.log("Next Since Id: " + nextSinceId);
+                i = length - index;
+                currentDigit = sinceId[i];
+                currentDigit = parseInt(currentDigit) + 1;
+
+                if (currentDigit < 10) {
+
+                    borrowDigit = false;
+                    sinceId = setCharAt(sinceId, i, currentDigit.toString());
+
+                    continue;
+                }
+
+                sinceId = setCharAt(sinceId, i, "0");
+                index += 1;
             }
 
-            // search for new added
-            if (statuses.length == 0 && !newRoutine) {
-                console.log("its empty");
-                console.log(nextSinceId);
-                newRoutine = true;
-                current_query.since_id = nextSinceId;
+            return sinceId;
+    },
 
-            } else if (sinceId != '') {
-                current_query.since_id = sinceId;
-                current_query.max_id = nextMaxId;
-            } else { // keep going on searching
-                current_query.max_id = nextMaxId;
+    // calculates Max ID
+    getDecrementMaxId: function(maxIdStr) {
+        var self = this;
+            var i, currentDigit,
+                index = 1,
+                borrowDigit = true,
+                length = maxIdStr.length;
+
+            function setCharAt(str, index, chr) {
+
+                if (index > str.length - 1) {
+                    return str;
+                }
+
+                return str.substr(0, index) + chr + str.substr(index + 1);
             }
-            twitter.getCustomApiCall(current_type, current_query, error, success);
+
+            while (borrowDigit) {
+
+                i = length - index;
+                currentDigit = maxIdStr[i];
+                currentDigit = parseInt(currentDigit) - 1;
+
+                if (currentDigit >= 0) {
+
+                    borrowDigit = false;
+                    maxIdStr = setCharAt(maxIdStr, i, currentDigit.toString());
+
+                    continue;
+                }
+
+                maxIdStr = setCharAt(maxIdStr, i, "0");
+                index += 1;
+            }
+
+            return maxIdStr;
+    },
+
+
+
+    initialize_execute: function() {
+        var self = this;
+        // get all IDs found previously
+        if (fs.existsSync('./data/oldIds.json')) {
+            var pre = fs.readFileSync('./data/oldIds.json', "utf-8");
+                self.oldIds = JSON.parse(pre).ids;
+                console.log(self.oldIds);
+        
         }
-
-}
-
-// processes result from REST API: GET statuses/user_timeline
-function getTimelineResult(data) {
-        var statuses = JSON.parse(data);
-        processResult(statuses);
-}
-
-// processes result from REST API: GET search/tweets
-function getSearchResult(data) {
-        var statuses = JSON.parse(data).statuses;
-        processResult(statuses);
-}
-
-// calculates Since ID
-function getIncrementSinceId(sinceId) {
-
-        var i, currentDigit,
-            index = 1,
-            borrowDigit = true,
-            length = sinceId.length;
-
-        function setCharAt(str, index, chr) {
-
-            if (index > str.length - 1) {
-                return str;
-            }
-
-            return str.substr(0, index) + chr + str.substr(index + 1);
+        // get today's file if exists
+        var path = './data/' + self.fileName + '.json';
+        console.log("load " + path)
+        if (fs.existsSync(path)) {
+            var pre = fs.readFileSync(path, 'utf-8');
+            self.oldData = JSON.parse(pre);
+        } else {
+            console.log("no existing file");
+            self.oldData = {"tweets" : [], "ids" : []};
         }
+        self.searchAPI('user_timeline');
+    },
 
-        while (borrowDigit) {
-
-            i = length - index;
-            currentDigit = sinceId[i];
-            currentDigit = parseInt(currentDigit) + 1;
-
-            if (currentDigit < 10) {
-
-                borrowDigit = false;
-                sinceId = setCharAt(sinceId, i, currentDigit.toString());
-
-                continue;
-            }
-
-            sinceId = setCharAt(sinceId, i, "0");
-            index += 1;
+    // Returns the media url of the tweet
+    process_media: function(entities) {
+        var self = this;
+        if (entities.hasOwnProperty('media')) {
+            var media = entities.media[0]
+            return media.media_url;
         }
+    },
 
-        return sinceId;
-    }
-
-// calculates Max ID
-function getDecrementMaxId(maxIdStr) {
-
-        var i, currentDigit,
-            index = 1,
-            borrowDigit = true,
-            length = maxIdStr.length;
-
-        function setCharAt(str, index, chr) {
-
-            if (index > str.length - 1) {
-                return str;
-            }
-
-            return str.substr(0, index) + chr + str.substr(index + 1);
+    // Excecutes GET request with the given type (user_timeline as defalut)
+    searchAPI: function(type) {
+        var self = this;
+        if (type == 'search') {
+            self.current_query = {'q':'@tickleapp', 'count': 50};
+            self.current_type = '/search/tweets.json';
+            self.twitter.getCustomApiCall('/search/tweets.json', self.current_query, self.error, self.getSearchResult);
+        } else if (type == 'user_timeline') {
+            self.current_query = {'screen_name': 'tickleapp', 'count': 1000, 'include_rts': false};
+            self.current_type = '/statuses/user_timeline.json';
+            self.twitter.getCustomApiCall('/statuses/user_timeline.json', self.current_query, self.error, self.success.bind(self));
         }
+    },
 
-        while (borrowDigit) {
+    //Callback functions
+    error: function (err, response, body) {
+        console.log('ERROR [%s]', JSON.stringify(err));
+    },
+    success: function (data) {
+        self = this;
+        self.getTimelineResult.call(self, data);
+    },
 
-            i = length - index;
-            currentDigit = maxIdStr[i];
-            currentDigit = parseInt(currentDigit) - 1;
+    // executes after obtaining all the data
+    after_crawling: function() {
+        var self = this;
+        var Downloader = new downloader();
+        Downloader.initialize_execute(self.after_downloading.bind(self));
+    },
 
-            if (currentDigit >= 0) {
-
-                borrowDigit = false;
-                maxIdStr = setCharAt(maxIdStr, i, currentDigit.toString());
-
-                continue;
-            }
-
-            maxIdStr = setCharAt(maxIdStr, i, "0");
-            index += 1;
-        }
-
-        return maxIdStr;
+    // executes after downloading the media
+    after_downloading: function() {
+        var self = this;
+            var Uploader = new uploader();
+            Uploader.initialize_execute();
     }
 
-
-
-function getOldData() {
-    // get all IDs found previously
-    if (fs.existsSync('./data/oldIds.json')) {
-        var pre = fs.readFileSync('./data/oldIds.json', "utf-8");
-            oldIds = JSON.parse(pre).ids;
-            console.log(oldIds);
-    
-    }
-    // get today's file if exists
-    var path = './data/' + fileName + '.json';
-    console.log("load " + path)
-    if (fs.existsSync(path)) {
-        var pre = fs.readFileSync(path, 'utf-8');
-        return JSON.parse(pre);
-    } else {
-        console.log("no existing file");
-        return {"tweets" : [], "ids" : []};
-    }
 }
 
-// Returns the media url of the tweet
-function process_media(entities) {
-    if (entities.hasOwnProperty('media')) {
-        var media = entities.media[0]
-        return media.media_url;
-    }
-}
-
-// Excecutes GET request with the given type (user_timeline as defalut)
-function searchAPI(type) {
-    if (type == 'search') {
-        current_query = {'q':'@tickleapp', 'count': 50};
-        current_type = '/search/tweets.json';
-        twitter.getCustomApiCall('/search/tweets.json', current_query, error, success);
-    } else if (type == 'user_timeline') {
-        current_query = {'screen_name': 'tickleapp', 'count': 1000, 'include_rts': false};
-        current_type = '/statuses/user_timeline.json';
-        twitter.getCustomApiCall('/statuses/user_timeline.json', current_query, error, success);
-    }
-}
-
-searchAPI('user_timeline');
+var tt = new TT();
+tt.initialize_execute();

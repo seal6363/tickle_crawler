@@ -1,89 +1,115 @@
 var PinIt = require('pin-it-node');
 var fs = require('fs');
 
-var uploaded_path = './data/uploaded.json';
-var new_upload_path = './data/new_found.json';
-var uploaded_data = {};
-var new_upload_data = {};
 
-// Data for Pinterest, to fill
-var boardId = '';
-var url = 'https://twitter.com/tickleapp';
-var pinIt = new PinIt({
-    username: '',
-    userurl: '',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
-    password: '',
-    debug: false
-});
+var Uploader = function() {
+	this.uploaded_path = './data/uploaded.json';
+	this.new_upload_path = './data/new_found.json';
+	this.uploaded_data = {};
+	this.new_upload_data = {};
 
+	// Data for Pinterest, to fill
+	this.boardId = '464082005291132118';
+	this.url = 'https://twitter.com/tickleapp';
+	this.pinIt = new PinIt({
+	    username: 'seal6363@gmail.com',
+	    userurl: 'lyrisovo',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
+	    password: 'pikachuya',
+	    debug: false
+	});
 
-function writeFiles() {
-	fs.writeFile('./data/uploaded.json', JSON.stringify(uploaded_data), (err) => {
-    if (err) throw err});
+	this.completed = false;
+	this.complete_callback = function(){return;};
 }
 
-function pin_one(tweets, count) {
-	if (tweets.length > 0) {
-		console.log("-------------------------------")
-		console.log("uploading one")
-		console.log(tweets.length)
+Uploader.prototype = {
 
-			var tweet = tweets.pop();
-			var pin = {boardId: boardId, url: url};
-			pin.description = tweet.text;
-			pin.media = tweet.media_url;
+	writeFiles: function(remains) {
+		var self = this;
+		fs.writeFile('./data/uploaded.json', JSON.stringify(self.uploaded_data), (err) => {
+	    	if (err) throw err;
+	    	if (remains.length <= 0) { 
+			  	setTimeout(function() {self.complete();}, 5000);
+			 }
+		});
+	},
 
-			console.log(pin)
-			if(pin.media != undefined && uploaded_data.ids.indexOf(tweet.id) == -1) {
-				pinIt.createPin(pin, function(err, pinObj) {
-				    if(err) {
-				        // Uh-oh...handle the error
-				        console.log(err);
-				        tweets.push(tweet);
-				        writeFiles();
-				    }
-				 
-				    console.log('Success!  New pin has been added to the board.');
-				    //console.log(pinObj);
-				    uploaded_data.ids.push(tweet.id);
-				    pin_one(tweets, count++);
-				});
-			} else {
-				pin_one(tweets, count);
-			}
-	} else {
-		console.log("done uploading, count: " + count);
-		writeFiles();
+	pin_one: function(tweets, count) {
+		var self = this;
+		if (tweets.length > 0) {
+			console.log("-------------------------------")
+			console.log("uploading one")
+			console.log(tweets.length)
+
+				var tweet = tweets.pop();
+				var pin = {boardId: self.boardId, url: self.url};
+				pin.description = tweet.text;
+				pin.media = tweet.media_url;
+
+				console.log(pin)
+				if(pin.media != undefined && self.uploaded_data.ids.indexOf(tweet.id) == -1) {
+					self.pinIt.createPin(pin, function(err, pinObj) {
+					    if(err) {
+					        // Uh-oh...handle the error
+					        console.log(err);
+					        tweets.push(tweet);
+					        self.writeFiles(tweets);
+					    }
+					 
+					    console.log('Success!  New pin has been added to the board.');
+					    //console.log(pinObj);
+					    self.uploaded_data.ids.push(tweet.id);
+					    self.pin_one(tweets, count++);
+					});
+				} else {
+					self.pin_one(tweets, count);
+				}
+		} else {
+			console.log("done uploading, count: " + count);
+			self.writeFiles(tweets);
+		}
+	},
+
+	upload: function(data) {
+		var self = this;
+		var tweets = data.tweets;
+		console.log("start uploading")
+
+		self.pin_one(tweets, 0);
+	},
+
+
+	// Gets new found tweets and previous uploaded data then starts uploading
+	initialize_execute: function() {
+		var self = this;
+		//self.complete_callback = callback;
+		if (fs.existsSync(self.new_upload_path)) {
+		        var pre = fs.readFileSync(self.new_upload_path, 'utf-8');
+		        self.new_upload_data =  JSON.parse(pre);
+		} else {
+		        console.log("no existing file");
+		        self.new_upload_data = {"tweets" : []};
+		}
+
+		if (fs.existsSync(self.uploaded_path)) {
+		        var pre = fs.readFileSync(self.uploaded_path, 'utf-8');
+		        self.uploaded_data =  JSON.parse(pre);
+
+		} else {
+		        console.log("no existing file");
+		        self.uploaded_data = {"ids" : []};
+		}
+		self.upload(self.new_upload_data);
+	},
+
+	complete: function() {
+		var self = this;
+		if (!self.completed) { 
+	        self.completed = true;
+			console.log("uploader completes execution");
+			self.complete_callback();
+		}
 	}
 }
 
-function upload(data) {
-	var tweets = data.tweets;
-	console.log("start uploading")
-
-	pin_one(tweets, 0);
-}
-
-
-// Gets new found tweets and previous uploaded data then starts uploading
-function prepareUploadData() {
-	if (fs.existsSync(new_upload_path)) {
-	        var pre = fs.readFileSync(new_upload_path, 'utf-8');
-	        new_upload_data =  JSON.parse(pre);
-	} else {
-	        console.log("no existing file");
-	        new_upload_data = {"tweets" : []};
-	}
-
-	if (fs.existsSync(uploaded_path)) {
-	        var pre = fs.readFileSync(uploaded_path, 'utf-8');
-	        uploaded_data =  JSON.parse(pre);
-
-	} else {
-	        console.log("no existing file");
-	        uploaded_data = {"ids" : []};
-	}
-	upload(new_upload_data);
-}
-
-prepareUploadData();
+module.exports = Uploader;
