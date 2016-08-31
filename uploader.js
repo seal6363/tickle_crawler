@@ -9,12 +9,12 @@ var Uploader = function() {
 	this.new_upload_data = {};
 
 	// Data for Pinterest, to fill
-	this.boardId = '';
+	this.boardId = '464082005291133308';
 	this.url = 'https://twitter.com/tickleapp';
 	this.pinIt = new PinIt({
-	    username: '',
-	    userurl: '',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
-	    password: '',
+	    username: 'seal6363@gmail.com',
+	    userurl: 'lyrisovo',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
+	    password: 'pikachuya',
 	    debug: false
 	});
 
@@ -54,6 +54,8 @@ Uploader.prototype = {
 					        console.log(err);
 					        tweets.push(tweet);
 					        self.writeFiles(tweets);
+					        self.pin_one(tweets, count);
+					    
 					    } else {
 					 
 						    console.log('Success!  New pin has been added to the board.');
