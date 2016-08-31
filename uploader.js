@@ -4,22 +4,22 @@ var fs = require('fs');
 
 var Uploader = function() {
 	this.uploaded_path = './data/uploaded.json';
-	this.new_upload_path = './data/new_found.json';
+	this.new_upload_path = './data/new_found_media.json';
 	this.uploaded_data = {};
 	this.new_upload_data = {};
 
 	// Data for Pinterest, to fill
-	this.boardId = '464082005291132118';
+	this.boardId = '';
 	this.url = 'https://twitter.com/tickleapp';
 	this.pinIt = new PinIt({
-	    username: 'seal6363@gmail.com',
-	    userurl: 'lyrisovo',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
-	    password: 'pikachuya',
+	    username: '',
+	    userurl: '',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
+	    password: '',
 	    debug: false
 	});
 
 	this.completed = false;
-	this.complete_callback = function(){return;};
+	this.complete_callback = function(){process.exit();};
 }
 
 Uploader.prototype = {
@@ -29,7 +29,7 @@ Uploader.prototype = {
 		fs.writeFile('./data/uploaded.json', JSON.stringify(self.uploaded_data), (err) => {
 	    	if (err) throw err;
 	    	if (remains.length <= 0) { 
-			  	setTimeout(function() {self.complete();}, 5000);
+			  	setTimeout(function() {self.complete();}, 3000);
 			 }
 		});
 	},
@@ -54,12 +54,13 @@ Uploader.prototype = {
 					        console.log(err);
 					        tweets.push(tweet);
 					        self.writeFiles(tweets);
-					    }
+					    } else {
 					 
-					    console.log('Success!  New pin has been added to the board.');
-					    //console.log(pinObj);
-					    self.uploaded_data.ids.push(tweet.id);
-					    self.pin_one(tweets, count++);
+						    console.log('Success!  New pin has been added to the board.');
+						    //console.log(pinObj);
+						    self.uploaded_data.ids.push(tweet.id);
+						    self.pin_one(tweets, count++);
+						}
 					});
 				} else {
 					self.pin_one(tweets, count);

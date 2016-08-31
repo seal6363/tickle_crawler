@@ -1,3 +1,7 @@
+/*
+Create 
+*/
+
 var fs = require('fs');
 var Twitter = require('twitter-node-client').Twitter;
 
@@ -5,6 +9,7 @@ var Twitter = require('twitter-node-client').Twitter;
 // Prototype functions, after_crawling and after_downloading, might have to be modified if below modules are changed.
 var downloader = require('./downloader');
 var uploader = require('./uploader');
+
 
 var TT = function() {
     // Variables for processing GET request 
@@ -23,6 +28,7 @@ var TT = function() {
     this.oldData = {};
     this.newData = {"tweets" : []};
     this.total_new = 0;
+    this.data_dir = './data/';
 
     //Get this data from twitter apps dashboard
     this.config = {
@@ -34,6 +40,7 @@ var TT = function() {
     }
 
     this.twitter = new Twitter(this.config);
+    this.completed = false;
 };
 
 TT.prototype = {
@@ -41,14 +48,16 @@ TT.prototype = {
     // Given a callback function executed after completeing crawling
     writeFiles: function(callback) {
         var self = this;
-            fs.writeFile('./data/' + self.fileName + '.json', JSON.stringify(self.oldData), (err) => {
+            fs.writeFile(self.data_dir + self.fileName + '.json', JSON.stringify(self.oldData), (err) => {
                 if (err) throw err});
-            fs.writeFile('./data/new_found.json', JSON.stringify(self.oldData), function(err) {
+            fs.writeFile(self.data_dir + 'new_found_media.json', JSON.stringify(self.newData), function(err) {
                 if (err) throw err
             });
-            fs.writeFile('./data/oldIds.json', JSON.stringify({"ids" : self.oldIds}), function(err) {
+            fs.writeFile(self.data_dir + 'oldIds.json', JSON.stringify({"ids" : self.oldIds}), function(err) {
                 if (err) throw err;
-                callback.call(self);
+                if (self.completed) {
+                    setTimeout(function() {callback.call(self);}, 1000);
+                }
             });
     },
 
@@ -71,6 +80,7 @@ TT.prototype = {
             if (self.newRoutine && statuses.length == 0) {
 
                 // create json
+                self.completed = true;
                 self.writeFiles(self.after_crawling.bind(self));
                 console.log("done searching, found " + self.total_new);
 
@@ -102,92 +112,6 @@ TT.prototype = {
                         self.writeFiles(self.after_crawling.bind(self));
                         console.log("redundant, found " + self.total_new);
                         break;
-
-//Get this data from twitter apps dashboard
-var config = {
-    "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
-    "consumerSecret": "qMWhFuYnQK4Oxh1i8ruHB2vKrMHaRzeTn78ACnJRWiCg7eVNtt",
-    "accessToken": "2529449622-cWSxhmvc7nWcmn7Br9Oe6Bf1RbOFF3pFmZanIsV",
-    "accessTokenSecret": "iQIc23V5OmDpsHisU39QZ9qCDATZyvOMGlVzNl4dYfLXj",
-    "callBackUrl": "XXX"
-}
-
-var twitter = new Twitter(config);
-
-// Variables for processing GET request
-var current_query = {};
-var current_type = '';
-var newRoutine = true;
-var nextMaxId = ''; 
-var nextSinceId = '';
-
-// Variables for noting the data
-var date = new Date();
-var fileName = date.getFullYear() + "_" + date.getMonth() + "_" + date.getDate() + "_tweets";
-var oldIds = [];
-var newIds = [];
-var oldData = getOldData();
-var newData = {"tweets" : []};
-var total_new = 0;
-
-//Callback functions
-var error = function (err, response, body) {
-    console.log('ERROR [%s]', JSON.stringify(err));
-};
-var success = function (data) {
-    getTimelineResult(data);
-};
-
-function writeFiles() {
-    fs.writeFile('./data/' + fileName + '.json', JSON.stringify(oldData), (err) => {
-        if (err) throw err});
-    fs.writeFile('./data/new_found.json', JSON.stringify(oldData), function(err) {
-        if (err) throw err
-    });
-    fs.writeFile('./data/oldIds.json', JSON.stringify({"ids" : oldData.ids}), function(err) {
-        if (err) throw err
-    });
-}
-
-// Escapes the tweet's description to proper format
-function escapeString(str) {
-    str = str.replace(/"/g, "\\\"");
-    str = str.replace(/\n/g, " ");
-    return str;
-}
-
-
-function processResult(statuses) {
-    console.log("-------------------------------------");
-
-        maxId = (current_query.max_id == null) ? '' : current_query.max_id;
-        sinceId = (current_query.since_id == null) ? '' : current_query.since_id;
-        // done searching
-        if (newRoutine && statuses.length == 0) {
-
-            // create json
-            writeFiles();
-            console.log("done searching, found " + total_new);
-
-        } else {
-
-            for (var i = 0; i < statuses.length; i++) {
-                var status = statuses[i];
-
-                if (oldIds.indexOf(status.id_str) < 0) {
-                    var tweet = {};
-                    tweet.date = status.created_at;
-                    tweet.id = status.id_str;
-                    tweet.text = escapeString(status.text);
-                    console.log(tweet.text)
-                    tweet.media_url = process_media(status.entities);
-                    //tweet.user = status.user
-                    tweet.hashtags = status.entities.hashtags;
-                    oldData.tweets.unshift(tweet);
-                    oldData.ids.unshift(tweet.id);
-                    if (tweet.media_url != undefined) {
-                        newData.tweets.unshift(tweet);
-
                     }
                 }
                 if (statuses.length !== 0) {
@@ -315,15 +239,23 @@ function processResult(statuses) {
 
     initialize_execute: function() {
         var self = this;
+
+        // create directory for data storing if not exists
+        if (!fs.existsSync(self.data_dir)){
+            fs.mkdirSync(self.data_dir);
+        }
+        if (!fs.existsSync('./downloaded/')) {
+            fs.mkdirSync('./downloaded/');
+        }
         // get all IDs found previously
-        if (fs.existsSync('./data/oldIds.json')) {
-            var pre = fs.readFileSync('./data/oldIds.json', "utf-8");
+        if (fs.existsSync(self.data_dir + 'oldIds.json')) {
+            var pre = fs.readFileSync(self.data_dir + 'oldIds.json', "utf-8");
                 self.oldIds = JSON.parse(pre).ids;
                 console.log(self.oldIds);
         
         }
         // get today's file if exists
-        var path = './data/' + self.fileName + '.json';
+        var path = self.data_dir + self.fileName + '.json';
         console.log("load " + path)
         if (fs.existsSync(path)) {
             var pre = fs.readFileSync(path, 'utf-8');

@@ -2,7 +2,7 @@ var fs = require('fs');
 var request = require('request');
 
 var Downloader = function() {
-	this.new_download_path = './data/new_found.json';
+	this.new_download_path = './data/new_found_media.json';
 	this.downloaded_path = './data/downloaded.json'
 	this.new_download_data = {};
 	this.downloaded_data = {};
@@ -59,7 +59,7 @@ Downloader.prototype = {
 				} else {
 					self.writeFiles(tweets);
 				}
-			}, 10);
+			}, 18);
 			
 		} else {
 			console.log("no new download");
