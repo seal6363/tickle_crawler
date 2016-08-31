@@ -74,8 +74,8 @@ TT.prototype = {
         var self = this;
         console.log("-------------------------------------");
 
-            maxId = (self.current_query.max_id == null) ? '' : self.current_query.max_id;
-            sinceId = (self.current_query.since_id == null) ? '' : self.current_query.since_id;
+            var maxId = (self.current_query.max_id == null) ? '' : self.current_query.max_id;
+            var sinceId = (self.current_query.since_id == null) ? '' : self.current_query.since_id;
             // done searching
             if (self.newRoutine && statuses.length == 0) {
 
