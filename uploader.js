@@ -9,12 +9,12 @@ var Uploader = function() {
 	this.new_upload_data = {};
 
 	// Data for Pinterest, to fill
-	this.boardId = '464082005291133308';
+	this.boardId = '';
 	this.url = 'https://twitter.com/tickleapp';
 	this.pinIt = new PinIt({
-	    username: 'seal6363@gmail.com',
-	    userurl: 'lyrisovo',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
-	    password: 'pikachuya',
+	    username: '',
+	    userurl: '',  //A user's page shows up on Pinterest as:  "http://www.pinterest.com/userurl/"
+	    password: '',
 	    debug: false
 	});
 
