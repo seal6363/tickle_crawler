@@ -299,6 +299,7 @@ TT.prototype = {
     //Callback functions
     error: function (err, response, body) {
         console.log('ERROR [%s]', JSON.stringify(err));
+        throw err;
     },
     success: function (data) {
         self = this;
