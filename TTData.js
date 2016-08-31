@@ -1,7 +1,6 @@
 var fs = require('fs');
 var Twitter = require('twitter-node-client').Twitter;
 
-<<<<<<< HEAD
 // modules for upload and download
 // Prototype functions, after_crawling and after_downloading, might have to be modified if below modules are changed.
 var downloader = require('./downloader');
@@ -103,7 +102,7 @@ TT.prototype = {
                         self.writeFiles(self.after_crawling.bind(self));
                         console.log("redundant, found " + self.total_new);
                         break;
-=======
+
 //Get this data from twitter apps dashboard
 var config = {
     "consumerKey": "AZcZxEflWSoy3eKvDZxiBpQxB",
@@ -188,7 +187,7 @@ function processResult(statuses) {
                     oldData.ids.unshift(tweet.id);
                     if (tweet.media_url != undefined) {
                         newData.tweets.unshift(tweet);
->>>>>>> 6ed0cfa84f4ce325a959676d8bdd00b032a669ff
+
                     }
                 }
                 if (statuses.length !== 0) {
