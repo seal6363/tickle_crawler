@@ -134,16 +134,16 @@ TT.prototype = {
                     self.newRoutine = true;
                     self.current_query.since_id = self.nextSinceId;
                     if (self.current_query.hasOwnProperty('max_id')) {
-                        delete self.current_query.max_id;
+                        delete self.current_query['max_id'];
                     }
 
-                } else if (self.sinceId != '') {
-                    self.current_query.since_id = self.sinceId;
+                } else if (sinceId != '') {
+                    self.current_query.since_id = sinceId;
                     self.current_query.max_id = self.nextMaxId;
                 } else { // keep going on searching
                     self.current_query.max_id = self.nextMaxId;
                     if (self.current_query.hasOwnProperty('since_id')) {
-                        delete self.current_query.since_id;
+                        delete self.current_query['since_id'];
                     }
                 }
                 self.twitter.getCustomApiCall(self.current_type, self.current_query, self.error, self.success.bind(self));
